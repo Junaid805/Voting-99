@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="hi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ग्राम पंचायत गांगेरू मतदान</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0fdf4;
+            /* Lightest Green background */
+        }
+
+        /* Unique Gradient Background for Header */
+        .header-bg {
+            /* Vertical Gradient: Bright Green -> Deep Green -> Darkest Green */
+            background: linear-gradient(180deg, #16a34a, #15803d, #052e16);
+            color: white;
+            padding-bottom: 3rem;
+            /* Unique separator border */
+            border-bottom: 6px solid #facc15;
+            /* Bright Yellow Separator */
+        }
+
+        /* Rich Gold/Metallic Title - Sharp and Darker */
+        .unique-title-glow {
+            color: #fcd34d;
+            /* Darker Gold Base */
+            font-weight: 900;
+            letter-spacing: 0.08em;
+            text-shadow:
+                2px 2px 0 #92400e,
+                /* Dark 3D effect for depth */
+                -1px -1px 0 #fde047,
+                /* Light highlight */
+                3px 3px 5px rgba(0, 0, 0, 0.5);
+            /* Subtle drop shadow */
+        }
+
+        /* Deep Amber/Gold Description - Sharp and Darker */
+        .unique-description-glow {
+            color: #d97706;
+            /* Deep Amber/Gold Base - Darker color */
+            font-weight: 800;
+            /* Increased boldness for better visibility */
+            text-shadow:
+                1px 1px 1px #fef3c7,
+                /* Light sharp highlight */
+                -1px -1px 1px #78350f,
+                /* Dark sharp shadow for depth */
+                0 0 1px #f59e0b;
+            /* Very subtle, tight amber shine (no spread) */
+        }
+
+        .candidate-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .candidate-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+
+        .progress-bar-bg {
+            height: 10px;
+            background-color: #dcfce7;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            transition: width 0.5s ease-in-out;
+            background-color: #22c55e;
+            /* Green for progress */
+        }
+
+        /* Style for the current winner */
+        .winner-card {
+            border-color: #f59e0b !important;
+            box-shadow: 0 0 0 4px #f59e0b90;
+            /* Orange glow */
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app" class="min-h-screen">
+        <header class="header-bg text-center pt-8">
+            <!-- Title with Unique Metallic Glow -->
+            <h1 class="text-4xl font-extrabold mb-2 unique-title-glow">ग्राम पंचायत गांगेरू मतदान</h1>
+
+            <!-- Admin Image -->
+            <div class="mt-4 mb-3 flex justify-center">
+                <img
+                    src="https://i.ibb.co/W46bH3GM/DSC1059-optimized-50-2-1.jpg"
+                    alt="Admin Junaid Chaudhary"
+                    class="w-24 h-24 rounded-full object-cover border-4 border-white shadow-xl"
+                    onerror="this.onerror=null; this.src='https://placehold.co/96x96/15803d/ffffff?text=Err';"
+                >
+            </div>
+
+            <!-- Admin Name with Unique Description Glow -->
+            <div class="mt-2 mb-4">
+                <p class="text-lg font-bold text-white unique-description-glow">जुनैद चौधरी (एडमिन)</p>
+            </div>
+
+            <!-- Inspirational Description with Unique Description Glow -->
+            <p class="text-xl mt-4 font-extrabold text-white unique-description-glow">
+                आपका एक वोट ग्राम पंचायत गांगेरू का भविष्य तय करेगा।
+            </p>
+            <p class="text-md mt-1 font-semibold text-green-200">
+                सोच-समझकर, निडर होकर अपना अनमोल मत दें। (सुरक्षित प्रणाली: एक यूजर = एक वोट)
+            </p>
+        </header>
+
+        <main class="max-w-6xl mx-auto p-4 md:p-8 -mt-12">
+            <div id="loading-spinner"
+                class="text-center text-xl text-green-700 font-semibold mt-10 p-6 bg-white rounded-xl shadow-lg hidden">
+                डेटा लोड हो रहा है...
+            </div>
+
+            <!-- Message Box -->
+            <div id="message-box"
+                class="p-4 rounded-xl text-white font-bold text-center mb-6 shadow-xl hidden transition-opacity duration-300">
+            </div>
+
+            <div id="candidate-list" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Candidate Cards will be inserted here by JavaScript -->
+            </div>
+        </main>
+    </div> <!-- End of #app -->
+
+    <!-- FOOTER: Admin Name and Year (छोटे अक्षरों में) -->
+    <footer class="text-center py-4 text-xs text-gray-500 bg-gray-50">
+        Junaid Chaudhari 2025
+    </footer>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, updateDoc, onSnapshot, collection, increment, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global variables provided by the environment (MUST be used)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        let app;
+        let db;
+        let auth;
+        let userId = null;
+        let hasVoted = false;
+        let votedCandidateId = null;
+
+        // CANDIDATE LIST - Symbols and Symbol Names (ट्रैक्टर, साइकिल, तीर कमान)
+        const CANDIDATE_DEFAULTS = [
+            // Symbol 🚜 (Tractor/Thar - थार गाड़ी)
+            { id: 'sanjiv', name: 'संजीव प्रधान (Sanjiv Pradhan)', imageUrl: 'https://i.ibb.co/Fk2Rw2dG/FB-IMG-1761914531275.jpg', symbol: '🚜', symbol_name: 'ट्रैक्टर' }, 
+            // Symbol 🚲 (Bicycle - साइकिल)
+            { id: 'rashid', name: 'राशिद प्रधान (Rashid Pradhan)', imageUrl: 'https://i.ibb.co/0bT4rrC/FB-IMG-1761915308039.jpg', symbol: '🚲', symbol_name: 'साइकिल' },
+            // Symbol 🏹 (Bow and Arrow - तीर कमान)
+            { id: 'tanvir', name: 'तनवीर प्रधान (Tanvir Pradhan)', imageUrl: 'https://i.ibb.co/KxZ008jt/FB-IMG-1761914650147.jpg', symbol: '🏹', symbol_name: 'तीर कमान' }
+        ];
+
+        // --- Utility Paths ---
+        const getCandidateTallyPath = () => `artifacts/${appId}/public/data/candidate_tallies`;
+        const getUserStatusDocPath = (uid) => `artifacts/${appId}/users/${uid}/voter_status/status_doc`;
+
+        // --- UI Functions ---
+        function showMessage(message, type = 'success') {
+            const msgBox = document.getElementById('message-box');
+            msgBox.textContent = message;
+            msgBox.className = 'p-4 rounded-xl font-bold text-center mb-6 shadow-xl transition-opacity duration-300';
+            
+            if (type === 'success') {
+                msgBox.classList.add('bg-green-600');
+            } else if (type === 'error') {
+                msgBox.classList.add('bg-red-600');
+            } else {
+                msgBox.classList.add('bg-green-600'); // Consistent messaging background
+            }
+
+            msgBox.classList.remove('hidden');
+
+            setTimeout(() => {
+                msgBox.classList.add('hidden');
+            }, 6000); // Keep message a bit longer for visibility
+        }
+
+        function renderCandidates(candidatesData) {
+            const listContainer = document.getElementById('candidate-list');
+            listContainer.innerHTML = '';
+            
+            // Merge Firestore data with default candidate list
+            const processedCandidates = [...CANDIDATE_DEFAULTS].map(defaultCand => {
+                const data = candidatesData.find(c => c.id === defaultCand.id) || { votes: 0 };
+                // Ensure all fields are preserved
+                return { 
+                    ...defaultCand, 
+                    votes: data.votes, 
+                    symbol: data.symbol || defaultCand.symbol, 
+                    symbol_name: data.symbol_name || defaultCand.symbol_name, // Include symbol name
+                    imageUrl: data.imageUrl || defaultCand.imageUrl 
+                };
+            });
+
+            // Calculate Max Votes for the Progress Bar
+            const totalVotes = processedCandidates.reduce((sum, candidate) => sum + candidate.votes, 0);
+            const maxVotes = processedCandidates.reduce((max, candidate) => Math.max(max, candidate.votes), 0);
+            
+            // Sort by votes (descending)
+            const sortedCandidates = processedCandidates.sort((a, b) => b.votes - a.votes); 
+            
+            // Store data globally for potential future analysis (even if feature is removed)
+            listContainer.candidatesData = processedCandidates;
+
+
+            sortedCandidates.forEach(candidate => {
+                const isWinner = candidate.votes > 0 && candidate.votes === maxVotes;
+                const isVoted = hasVoted && votedCandidateId === candidate.id;
+                
+                // Calculate percentage for the unique progress bar (relative to max votes)
+                const votePercentage = maxVotes > 0 ? (candidate.votes / maxVotes) * 100 : 0;
+                // Calculate vote share (relative to total votes)
+                const voteShare = totalVotes > 0 ? (candidate.votes / totalVotes) * 100 : 0;
+                
+                // Set card styling based on status
+                let cardClasses = 'candidate-card bg-white p-6 rounded-xl shadow-lg border-4 border-white';
+                
+                if (isVoted) {
+                    cardClasses = 'candidate-card bg-white p-6 rounded-xl shadow-2xl border-4 border-green-600'; // Voted card highlight in Green
+                }
+                
+                if (isWinner && maxVotes > 0) {
+                    // Unique Winner Class
+                    cardClasses += ' winner-card shadow-2xl'; 
+                }
+
+                let voteButtonColor = hasVoted ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 active:bg-green-800 shadow-md hover:shadow-lg';
+
+                const cardHtml = `
+                    <div id="card-${candidate.id}" class="${cardClasses}">
+                        <div class="flex items-center space-x-4 mb-4">
+                            
+                            <!-- Candidate Image (Goal Frame) -->
+                            ${candidate.imageUrl ? 
+                                `<img src="${candidate.imageUrl}" alt="${candidate.name}" class="w-16 h-16 rounded-full object-cover border-2 border-green-400 flex-shrink-0">` : 
+                                ''}
+                            
+                            <!-- Symbol and Name below it -->
+                            <div class="flex flex-col items-center flex-shrink-0">
+                                <span class="text-3xl">${candidate.symbol}</span>
+                                <span class="text-xs font-semibold text-gray-500 mt-1">${candidate.symbol_name}</span>
+                            </div>
+
+                            <!-- Candidate Name -->
+                            <h2 class="text-xl font-extrabold text-gray-800 break-words">${candidate.name}</h2>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <!-- Real-time Vote Count -->
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-sm font-semibold text-gray-600">कुल वोट (Total Votes):</span>
+                                <span class="text-3xl font-extrabold ${isWinner ? 'text-yellow-700' : 'text-green-600'}">${candidate.votes}</span>
+                            </div>
+                            
+                            <!-- Vote Share Display -->
+                            <div class="flex justify-between items-center text-sm font-medium text-gray-500 mb-2">
+                                <span>वोट शेयर (Vote Share):</span>
+                                <span class="font-bold text-gray-700">${voteShare.toFixed(1)}%</span>
+                            </div>
+
+                            <!-- Unique Progress Bar (Relative to Max Votes) -->
+                            <div class="progress-bar-bg">
+                                <div class="progress-bar-fill ${isWinner ? 'bg-yellow-500' : 'bg-green-500'}" style="width: ${votePercentage}%"></div>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">
+                                ${maxVotes > 0 ? `${votePercentage.toFixed(1)}% (वर्तमान लीडर के मुकाबले)` : 'मतदान शुरू करें'}
+                            </p>
+                        </div>
+                        
+                        <!-- Voting Button -->
+                        <button 
+                            id="vote-btn-${candidate.id}" 
+                            data-candidate-id="${candidate.id}"
+                            class="w-full mt-6 py-3 rounded-lg font-bold text-white transition duration-200 
+                                ${voteButtonColor}"
+                            ${hasVoted ? 'disabled' : ''}
+                        >
+                            ${isVoted ? 'आपका वोट दर्ज है! ✅' : hasVoted ? 'आप पहले ही वोट दे चुके हैं' : 'वोट दें'}
+                        </button>
+                    </div>
+                `;
+                listContainer.insertAdjacentHTML('beforeend', cardHtml);
+            });
+
+            // Re-attach event listeners after rendering
+            if (!hasVoted) {
+                document.querySelectorAll('[data-candidate-id]').forEach(button => {
+                    button.addEventListener('click', () => handleVote(button.dataset.candidateId));
+                });
+            }
+        }
+        
+        // --- Firestore Logic ---
+
+        /**
+         * Initialize the candidate documents if they don't exist.
+         */
+        async function initializeCandidates() {
+            try {
+                const candidateTallyCollection = collection(db, getCandidateTallyPath());
+                console.log("Initializing candidates if needed...");
+
+                for (const candidate of CANDIDATE_DEFAULTS) {
+                    const docRef = doc(candidateTallyCollection, candidate.id);
+                    // Set Doc with merge to ensure we don't overwrite votes if they exist
+                    await setDoc(docRef, { 
+                        name: candidate.name, 
+                        symbol: candidate.symbol || '', 
+                        symbol_name: candidate.symbol_name || '', // Save symbol name
+                        imageUrl: candidate.imageUrl || '', 
+                        votes: 0 
+                    }, { merge: true });
+                }
+                console.log("Candidates initialized/checked.");
+            } catch (error) {
+                console.error("Error initializing candidates:", error);
+                showMessage("उम्मीदवारों को लोड करने में त्रुटि। कंसोल देखें।", 'error');
+            }
+        }
+
+        /**
+         * Handles the voting transaction to ensure atomicity (one vote).
+         */
+        async function handleVote(candidateId) {
+            if (!userId) {
+                showMessage("प्रमाणीकरण विफल। कृपया पेज रीफ्रेश करें।", 'error');
+                return;
+            }
+
+            if (hasVoted) {
+                showMessage(`आप पहले ही ${votedCandidateId === candidateId ? 'इसी' : 'किसी और'} उम्मीदवार को वोट दे चुके हैं।`, 'error');
+                return;
+            }
+
+            const loadingSpinner = document.getElementById('loading-spinner');
+            loadingSpinner.textContent = 'वोट दर्ज किया जा रहा है... कृपया प्रतीक्षा करें...';
+            loadingSpinner.classList.remove('hidden');
+
+            try {
+                await runTransaction(db, async (transaction) => {
+                    // 1. Check Private Status within the transaction (Security Check)
+                    const userStatusRef = doc(db, getUserStatusDocPath(userId));
+                    const userStatusDoc = await transaction.get(userStatusRef);
+
+                    if (userStatusDoc.exists() && userStatusDoc.data().hasVoted) {
+                        throw new Error("ALREADY_VOTED");
+                    }
+
+                    // 2. Update Public Tally (Increment vote count)
+                    const candidateRef = doc(db, getCandidateTallyPath(), candidateId);
+                    transaction.update(candidateRef, { 
+                        votes: increment(1) 
+                    });
+
+                    // 3. Update Private Status (Mark as voted)
+                    transaction.set(userStatusRef, { 
+                        hasVoted: true, 
+                        votedCandidateId: candidateId,
+                        votedAt: new Date().toISOString(),
+                    }, { merge: true });
+                });
+
+                // Client-side state update upon successful transaction
+                hasVoted = true;
+                votedCandidateId = candidateId;
+                showMessage("आपका वोट सफलतापूर्वक दर्ज किया गया।", 'success');
+
+                renderCandidates(document.getElementById('candidate-list').candidatesData || []); 
+
+            } catch (e) {
+                if (e.message === "ALREADY_VOTED") {
+                    showMessage("त्रुटि: आप पहले ही वोट दे चुके हैं। आपके वोट को बदला नहीं जा सकता।", 'error');
+                } else {
+                    console.error("Voting Transaction Failed:", e);
+                    showMessage("वोट दर्ज करने में कोई तकनीकी त्रुटि हुई।", 'error');
+                }
+            } finally {
+                loadingSpinner.classList.add('hidden');
+            }
+        }
+
+
+        /**
+         * Setup Firestore listeners for real-time updates.
+         */
+        function setupListeners() {
+            if (!db || !userId) return;
+
+            // Listener 1: Real-time update for Candidate Tallies (Public Data)
+            const candidateTallyCollection = collection(db, getCandidateTallyPath());
+            onSnapshot(candidateTallyCollection, (snapshot) => {
+                const candidatesData = [];
+                snapshot.forEach((doc) => {
+                    candidatesData.push({ id: doc.id, ...doc.data() });
+                });
+                document.getElementById('candidate-list').candidatesData = candidatesData; 
+                renderCandidates(candidatesData);
+                document.getElementById('loading-spinner').classList.add('hidden');
+            }, (error) => {
+                console.error("Error listening to tallies:", error);
+                showMessage("वोट की गिनती लोड नहीं हो पाई।", 'error');
+            });
+
+            // Listener 2: Real-time update for User Status (Private Data)
+            const userStatusRef = doc(db, getUserStatusDocPath(userId));
+            onSnapshot(userStatusRef, (doc) => {
+                if (doc.exists()) {
+                    const data = doc.data();
+                    if (data.hasVoted) {
+                        hasVoted = true;
+                        votedCandidateId = data.votedCandidateId;
+                        console.log('Authenticated User ID:', userId, 'has already voted for', votedCandidateId);
+                    } else {
+                        hasVoted = false;
+                        votedCandidateId = null;
+                    }
+                } else {
+                    hasVoted = false;
+                    votedCandidateId = null;
+                }
+                renderCandidates(document.getElementById('candidate-list').candidatesData || []);
+            }, (error) => {
+                console.error("Error listening to user status:", error);
+            });
+        }
+
+        // --- Initialization ---
+
+        window.onload = async function() {
+            if (!firebaseConfig) {
+                console.error("Firebase configuration is missing.");
+                showMessage("Firebase कॉन्फ़िगरेशन अनुपलब्ध है।", 'error');
+                return;
+            }
+
+            try {
+                // Initialize Firebase
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                document.getElementById('loading-spinner').classList.remove('hidden');
+
+                // 1. Authenticate User
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                
+                // 2. Auth State Listener
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        
+                        // 3. Initialize Candidates and Setup Listeners
+                        initializeCandidates(); 
+                        setupListeners();
+
+                    } else {
+                        // Fallback/Error case
+                        userId = crypto.randomUUID(); 
+                        console.error('Authentication failed. Using temporary ID:', userId);
+                        document.getElementById('loading-spinner').classList.add('hidden');
+                        showMessage("प्रमाणीकरण विफल। वोटिंग सुरक्षा प्रभावित हो सकती है।", 'error');
+                    }
+                });
+
+            } catch (error) {
+                console.error("Application initialization failed:", error);
+                document.getElementById('loading-spinner').classList.add('hidden');
+                showMessage(`ऐप शुरू करने में त्रुटि: ${error.message}`, 'error');
+            }
+        };
+    </script>
+</body>
+
+</html>
